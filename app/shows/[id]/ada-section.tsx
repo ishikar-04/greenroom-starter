@@ -646,6 +646,12 @@ export function AdaSection({
   const displayFlags = result?.flags ?? existingFlags ?? null;
   const displayMode = result?.mode_used ?? (existingExtraction != null ? "update" : "initial");
 
+  // True when the most-recent persisted run failed and nothing has succeeded yet this session.
+  const lastRunFailed =
+    result === null &&
+    existingHistory.length > 0 &&
+    existingHistory[0].extractionSnapshotJson === null;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!pastedText.trim() || isLoading) return;
@@ -705,6 +711,14 @@ export function AdaSection({
       <Card>
         <CardContent className="pt-5">
           <form onSubmit={handleSubmit} className="space-y-4">
+            {lastRunFailed && (
+              <div className="rounded-md ring-1 ring-amber-200/70 bg-amber-50/60 px-4 py-3 flex items-start gap-2">
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-[12px] text-amber-800">
+                  Last Ada run failed — your input was preserved. Run Ada again to retry.
+                </p>
+              </div>
+            )}
             <div>
               <div className="flex items-baseline justify-between mb-2">
                 <label
