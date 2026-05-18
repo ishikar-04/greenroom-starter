@@ -17,6 +17,7 @@ import type {
   AdaFieldAffected,
   AdaMode,
   AdaApiSuccess,
+  AdaHistoryEntry,
 } from "@/lib/ada/types";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -38,6 +39,12 @@ const FLAG_CLASS_LABELS: Record<AdaFlag["flag_class"], string> = {
   other: "Advisory",
 };
 
+const MODE_LABELS: Record<AdaMode, string> = {
+  initial: "Initial",
+  update: "Update",
+  replace: "Replace",
+};
+
 function formatMoney(n: number | null | undefined): string {
   if (n == null) return "—";
   return new Intl.NumberFormat("en-US", {
@@ -51,6 +58,16 @@ function formatMoney(n: number | null | undefined): string {
 function formatPct(n: number | null | undefined): string {
   if (n == null) return "—";
   return `${(n * 100).toFixed(0)}%`;
+}
+
+function formatTimestamp(iso: string): string {
+  return new Date(iso).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
 // ─── Flag display ────────────────────────────────────────────────────────────
@@ -387,18 +404,16 @@ function DeltaPanel({ extraction }: { extraction: AdaExtraction }) {
   );
 }
 
-// ─── Result display ──────────────────────────────────────────────────────────
+// ─── Extraction result display ───────────────────────────────────────────────
 
 function ExtractionResult({
   extraction,
   flags,
   modeUsed,
-  onRunAgain,
 }: {
   extraction: AdaExtraction;
   flags: AdaFlag[];
   modeUsed: AdaMode;
-  onRunAgain: () => void;
 }) {
   const [showRawText, setShowRawText] = useState(false);
 
@@ -412,17 +427,14 @@ function ExtractionResult({
 
   return (
     <div className="space-y-4">
-      {/* Global flag banner */}
       {globalFlags.length > 0 && (
         <div className="space-y-2">
           {globalFlags.map((f, i) => <FlagItem key={i} flag={f} />)}
         </div>
       )}
 
-      {/* Delta panel — Update mode only */}
       {modeUsed === "update" && <DeltaPanel extraction={extraction} />}
 
-      {/* Extraction cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <CoreTermsCard extraction={extraction} flagMap={flagMap} />
         <PercentageSplitCard extraction={extraction} flagMap={flagMap} />
@@ -431,7 +443,6 @@ function ExtractionResult({
         <BonusesCard extraction={extraction} flagMap={flagMap} />
       </div>
 
-      {/* Complex structure indicator */}
       {extraction.complex_structure && (
         <div className="flex items-center gap-2 text-[12px] text-ink-500 pt-1">
           <Info className="h-3.5 w-3.5" />
@@ -439,7 +450,6 @@ function ExtractionResult({
         </div>
       )}
 
-      {/* Raw text toggle */}
       <div className="border-t border-ink-100/80 pt-3">
         <button
           type="button"
@@ -455,17 +465,65 @@ function ExtractionResult({
           </div>
         )}
       </div>
+    </div>
+  );
+}
 
-      {/* Run again */}
-      <div className="pt-1">
+// ─── History panel ───────────────────────────────────────────────────────────
+
+function HistoryEntryItem({ entry }: { entry: AdaHistoryEntry }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const snippet =
+    entry.pastedText.length > 80
+      ? entry.pastedText.slice(0, 80) + "…"
+      : entry.pastedText;
+
+  let snapshotData: { extraction: AdaExtraction; flags: AdaFlag[] } | null = null;
+  if (entry.extractionSnapshotJson) {
+    try {
+      snapshotData = JSON.parse(entry.extractionSnapshotJson);
+    } catch {
+      // malformed snapshot — show failure state
+    }
+  }
+
+  return (
+    <div className="rounded-lg ring-1 ring-ink-200/60 bg-white px-4 py-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[11px] text-ink-500">{formatTimestamp(entry.pastedAt)}</span>
+            <span className="text-ink-300">·</span>
+            <span className="text-[11px] text-ink-500">{MODE_LABELS[entry.modeUsed]}</span>
+          </div>
+          <p className="text-[12px] text-ink-600 leading-relaxed">{snippet}</p>
+        </div>
         <button
           type="button"
-          onClick={onRunAgain}
-          className="text-[12px] text-brand-600 hover:text-brand-800 transition-colors underline underline-offset-2"
+          onClick={() => setExpanded((v) => !v)}
+          className="flex items-center gap-1 text-[11px] text-ink-400 hover:text-ink-700 transition-colors shrink-0 mt-0.5"
+          aria-label={expanded ? "Collapse" : "Expand"}
         >
-          Run Ada again
+          {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
         </button>
       </div>
+
+      {expanded && (
+        <div className="mt-3 pt-3 border-t border-ink-100/80">
+          {snapshotData ? (
+            <ExtractionResult
+              extraction={snapshotData.extraction}
+              flags={snapshotData.flags}
+              modeUsed={entry.modeUsed}
+            />
+          ) : (
+            <p className="text-[12px] text-ink-400 italic">
+              Extraction failed — input preserved
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -477,22 +535,23 @@ export function AdaSection({
   dealNotesFreetext,
   existingExtraction,
   existingFlags,
+  existingHistory,
 }: {
   dealId: string;
   dealNotesFreetext: string | null;
   existingExtraction: AdaExtraction | null;
   existingFlags: AdaFlag[] | null;
+  existingHistory: AdaHistoryEntry[];
 }) {
-  const hasExisting = existingExtraction != null;
   const router = useRouter();
 
   const [pastedText, setPastedText] = useState("");
-  const [mode, setMode] = useState<AdaMode>(hasExisting ? "update" : "initial");
+  const [mode, setMode] = useState<AdaMode>(existingExtraction != null ? "update" : "initial");
   const [isLoading, setIsLoading] = useState(false);
   const [loadingPhase, setLoadingPhase] = useState(0);
   const [result, setResult] = useState<AdaApiSuccess | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState(!hasExisting);
+  const [history, setHistory] = useState<AdaHistoryEntry[]>(existingHistory);
 
   const loadingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -513,11 +572,12 @@ export function AdaSection({
     };
   }, [isLoading]);
 
-  // If we have a prior result from this session, show it.
-  // Otherwise show existing extraction from server if available.
+  // A prior extraction exists either from the server or from this session.
+  const hasExisting = existingExtraction != null || result != null;
+
   const displayExtraction = result?.extraction ?? existingExtraction ?? null;
   const displayFlags = result?.flags ?? existingFlags ?? null;
-  const displayMode = result?.mode_used ?? (hasExisting ? "update" : "initial");
+  const displayMode = result?.mode_used ?? (existingExtraction != null ? "update" : "initial");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -542,8 +602,10 @@ export function AdaSection({
       if (!res.ok || "error" in data) {
         setError(data.error ?? "Something went wrong. Please try again.");
       } else {
-        setResult(data as AdaApiSuccess);
-        setShowForm(false);
+        const success = data as AdaApiSuccess;
+        setResult(success);
+        setPastedText("");
+        if (success.history) setHistory(success.history);
         router.refresh();
       }
     } catch {
@@ -551,12 +613,6 @@ export function AdaSection({
     } finally {
       setIsLoading(false);
     }
-  }
-
-  function handleRunAgain() {
-    setShowForm(true);
-    setPastedText("");
-    setError(null);
   }
 
   return (
@@ -567,130 +623,116 @@ export function AdaSection({
         <span className="text-[11px] text-ink-400">· Deal disambiguation assistant</span>
       </div>
 
-      {/* Paste form */}
-      {showForm && (
-        <Card>
-          <CardContent className="pt-5">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <div className="flex items-baseline justify-between mb-2">
-                  <label
-                    htmlFor="ada-paste"
-                    className="eyebrow text-[10px] text-ink-500"
-                  >
-                    Paste the latest deal email or agent communication
-                  </label>
-                  {dealNotesFreetext && (
-                    <button
-                      type="button"
-                      onClick={() => setPastedText(dealNotesFreetext)}
-                      className="text-[11px] text-brand-600 hover:text-brand-800 transition-colors"
-                    >
-                      ↓ Insert current deal notes
-                    </button>
-                  )}
-                </div>
-                <textarea
-                  id="ada-paste"
-                  value={pastedText}
-                  onChange={(e) => setPastedText(e.target.value)}
-                  placeholder="Paste deal email here..."
-                  rows={6}
-                  className="w-full rounded-md ring-1 ring-ink-200/80 bg-canvas-soft px-4 py-3 text-[13px] text-ink-900 placeholder:text-ink-300 resize-y focus:outline-none focus:ring-2 focus:ring-brand-400/60 leading-relaxed"
-                  disabled={isLoading}
-                />
-              </div>
+      {/* Current extraction results */}
+      {displayExtraction && displayFlags && (
+        <div className="mb-6">
+          <ExtractionResult
+            extraction={displayExtraction}
+            flags={displayFlags}
+            modeUsed={displayMode as AdaMode}
+          />
+        </div>
+      )}
 
-              {/* Mode selector — only shown when a prior extraction exists */}
-              {hasExisting && (
-                <div className="flex items-center gap-4">
-                  <span className="eyebrow text-[10px] text-ink-500">Mode</span>
-                  {(["update", "replace", "initial"] as const).map((m) => (
-                    <label
-                      key={m}
-                      className={cn(
-                        "flex items-center gap-1.5 text-[12.5px] cursor-pointer",
-                        mode === m ? "text-ink-900" : "text-ink-500",
-                        isLoading && "opacity-50 pointer-events-none",
-                      )}
-                    >
-                      <input
-                        type="radio"
-                        name="ada-mode"
-                        value={m}
-                        checked={mode === m}
-                        onChange={() => setMode(m)}
-                        className="accent-brand-600"
-                        disabled={isLoading}
-                      />
-                      <span className="capitalize">{m}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
+      {/* Version history — last 3 runs */}
+      {history.length > 0 && (
+        <div className="mb-6">
+          <div className="eyebrow text-[10px] text-ink-500 mb-2">Recent runs</div>
+          <div className="space-y-2">
+            {history.slice(0, 3).map((entry) => (
+              <HistoryEntryItem key={entry.id} entry={entry} />
+            ))}
+          </div>
+        </div>
+      )}
 
-              {error && (
-                <div className="rounded-md ring-1 ring-rose-200 bg-rose-50/60 px-4 py-3 text-[12.5px] text-rose-800">
-                  {error}
-                </div>
-              )}
-
-              <div className="flex items-center gap-4">
-                <Button
-                  type="submit"
-                  variant="brand"
-                  disabled={!pastedText.trim() || isLoading}
+      {/* Paste form — always visible */}
+      <Card>
+        <CardContent className="pt-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <div className="flex items-baseline justify-between mb-2">
+                <label
+                  htmlFor="ada-paste"
+                  className="eyebrow text-[10px] text-ink-500"
                 >
-                  {isLoading ? (
-                    <span className="flex items-center gap-2">
-                      <span className="inline-block h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                      {LOADING_MESSAGES[loadingPhase]}
-                    </span>
-                  ) : (
-                    <>
-                      <Sparkles className="h-3.5 w-3.5" />
-                      Ask Ada
-                    </>
-                  )}
-                </Button>
-                {(displayExtraction || hasExisting) && !isLoading && (
+                  Paste the latest deal email or agent communication
+                </label>
+                {dealNotesFreetext && (
                   <button
                     type="button"
-                    onClick={() => setShowForm(false)}
-                    className="text-[12px] text-ink-400 hover:text-ink-700 transition-colors"
+                    onClick={() => setPastedText(dealNotesFreetext)}
+                    className="text-[11px] text-brand-600 hover:text-brand-800 transition-colors"
                   >
-                    Cancel
+                    ↓ Insert current deal notes
                   </button>
                 )}
               </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
+              <textarea
+                id="ada-paste"
+                value={pastedText}
+                onChange={(e) => setPastedText(e.target.value)}
+                placeholder="Paste deal email here..."
+                rows={6}
+                className="w-full rounded-md ring-1 ring-ink-200/80 bg-canvas-soft px-4 py-3 text-[13px] text-ink-900 placeholder:text-ink-300 resize-y focus:outline-none focus:ring-2 focus:ring-brand-400/60 leading-relaxed"
+                disabled={isLoading}
+              />
+            </div>
 
-      {/* Results */}
-      {!showForm && displayExtraction && displayFlags && (
-        <ExtractionResult
-          extraction={displayExtraction}
-          flags={displayFlags}
-          modeUsed={displayMode as AdaMode}
-          onRunAgain={handleRunAgain}
-        />
-      )}
+            {/* Mode selector — shown once a prior extraction exists */}
+            {hasExisting && (
+              <div className="flex items-center gap-4">
+                <span className="eyebrow text-[10px] text-ink-500">Mode</span>
+                {(["update", "replace", "initial"] as const).map((m) => (
+                  <label
+                    key={m}
+                    className={cn(
+                      "flex items-center gap-1.5 text-[12.5px] cursor-pointer",
+                      mode === m ? "text-ink-900" : "text-ink-500",
+                      isLoading && "opacity-50 pointer-events-none",
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="ada-mode"
+                      value={m}
+                      checked={mode === m}
+                      onChange={() => setMode(m)}
+                      className="accent-brand-600"
+                      disabled={isLoading}
+                    />
+                    <span className="capitalize">{m}</span>
+                  </label>
+                ))}
+              </div>
+            )}
 
-      {/* Initial state when no extraction exists and form is closed (shouldn't happen) */}
-      {!showForm && !displayExtraction && (
-        <div className="text-[13px] text-ink-400 py-4">
-          No extraction yet.{" "}
-          <button
-            type="button"
-            onClick={() => setShowForm(true)}
-            className="text-brand-600 hover:text-brand-800 transition-colors underline underline-offset-2"
-          >
-            Paste a deal email to get started.
-          </button>
-        </div>
-      )}
+            {error && (
+              <div className="rounded-md ring-1 ring-rose-200 bg-rose-50/60 px-4 py-3 text-[12.5px] text-rose-800">
+                {error}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              variant="brand"
+              disabled={!pastedText.trim() || isLoading}
+            >
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <span className="inline-block h-3.5 w-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  {LOADING_MESSAGES[loadingPhase]}
+                </span>
+              ) : (
+                <>
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Ask Ada
+                </>
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

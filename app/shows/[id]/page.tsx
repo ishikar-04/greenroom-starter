@@ -10,6 +10,9 @@ import {
 import { AdaSection } from "./ada-section";
 import type { AdaExtraction, AdaFlag } from "@/lib/ada/types";
 import { getShowById } from "@/lib/queries";
+import { db } from "@/db";
+import { dealNotesHistory } from "@/db/schema";
+import { eq, desc } from "drizzle-orm";
 import {
   Card,
   CardContent,
@@ -59,6 +62,15 @@ export default async function ShowDetailPage({
     expenses,
     comps,
   } = data;
+
+  const adaHistory = deal
+    ? await db
+        .select()
+        .from(dealNotesHistory)
+        .where(eq(dealNotesHistory.dealId, deal.id))
+        .orderBy(desc(dealNotesHistory.pastedAt))
+        .limit(3)
+    : [];
 
   const grossSoFar = ticketSales.reduce((sum, t) => sum + t.gross, 0);
   const totalFees = ticketSales.reduce((sum, t) => sum + t.fees, 0);
@@ -471,6 +483,13 @@ export default async function ShowDetailPage({
                 ? (JSON.parse(deal.ambiguityFlagsJson) as AdaFlag[])
                 : null
             }
+            existingHistory={adaHistory.map((h) => ({
+              id: h.id,
+              pastedText: h.pastedText,
+              modeUsed: h.modeUsed,
+              pastedAt: (h.pastedAt as Date).toISOString(),
+              extractionSnapshotJson: h.extractionSnapshotJson,
+            }))}
           />
         )}
       </div>

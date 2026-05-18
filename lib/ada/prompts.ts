@@ -59,25 +59,49 @@ ${AMBIGUITY_CLASS_GUIDE}
 - Percentages should be expressed as decimals (e.g., 85% → 0.85).`;
 }
 
+type HistoryRow = {
+  modeUsed: AdaMode;
+  pastedAt: Date | string;
+  extractionSnapshotJson: string | null;
+};
+
 export function buildUserMessage(
   mode: AdaMode,
   pastedText: string,
   priorExtraction?: AdaExtraction | null,
+  history?: HistoryRow[] | null,
 ): string {
   if (mode === "update" && priorExtraction) {
+    const validHistory = (history ?? []).filter(
+      (h): h is HistoryRow & { extractionSnapshotJson: string } =>
+        h.extractionSnapshotJson != null,
+    );
+
+    let historySection = "";
+    if (validHistory.length > 0) {
+      const lines = validHistory.map((h, i) => {
+        const ts =
+          h.pastedAt instanceof Date
+            ? h.pastedAt.toISOString()
+            : h.pastedAt;
+        return `Run ${i + 1} — [${h.modeUsed}, ${ts}]: ${h.extractionSnapshotJson}`;
+      });
+      historySection = `Prior run history for this deal (oldest to most recent):\n${lines.join("\n")}\n\n`;
+    } else {
+      historySection = `Prior extraction on file:\n${JSON.stringify(priorExtraction, null, 2)}\n\n`;
+    }
+
     return `Mode: UPDATE
 
-Prior extraction on file:
-${JSON.stringify(priorExtraction, null, 2)}
-
-New email text to process:
+${historySection}New email text to process:
 ${pastedText}
 
 Instructions for update mode:
 1. Produce a full new extraction reflecting the current deal state (do not omit fields that haven't changed).
 2. Populate changes_from_previous with an entry for each field that changed between the prior extraction and the new email. Include field_path, previous_value, new_value, and evidence_quote (exact phrase from the new email).
 3. For fields unchanged, carry forward the prior values exactly.
-4. If the new email references context not present in the prior extraction (e.g., "the +500 stays in" with no prior +500), generate an unresolved_reference flag.`;
+4. If the new email references context not present in the prior extraction (e.g., "the +500 stays in" with no prior +500), generate an unresolved_reference flag.
+5. Use the full run history above to understand how the deal has evolved — identify what the new email changes, contradicts, or adds relative to all prior versions.`;
   }
 
   return `Mode: ${mode.toUpperCase()}

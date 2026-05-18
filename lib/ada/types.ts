@@ -89,11 +89,20 @@ export interface AdaApiRequest {
   mode: AdaMode;
 }
 
+export interface AdaHistoryEntry {
+  id: string;
+  pastedText: string;
+  modeUsed: AdaMode;
+  pastedAt: string; // ISO string
+  extractionSnapshotJson: string | null;
+}
+
 export interface AdaApiSuccess {
   extraction: AdaExtraction;
   flags: AdaFlag[];
   mode_used: AdaMode;
   history_id: string;
+  history: AdaHistoryEntry[]; // last 3, most recent first
 }
 
 export interface AdaApiError {

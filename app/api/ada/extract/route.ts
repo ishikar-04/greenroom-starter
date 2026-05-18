@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { db } from "@/db";
 import { deals, dealNotesHistory } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, asc, desc, inArray } from "drizzle-orm";
 import { buildSystemPrompt, buildUserMessage } from "@/lib/ada/prompts";
 import { geminiResponseSchema } from "@/lib/ada/schemas";
 import type {
@@ -115,6 +115,15 @@ export async function POST(req: Request) {
     priorExtraction = null;
   }
 
+  // Fetch full history (oldest → newest) for use in the Update mode prompt.
+  // This is done after Txn A, so the current row is included but its snapshot
+  // is still null — it will be filtered out in buildUserMessage.
+  const fullHistory = await db
+    .select()
+    .from(dealNotesHistory)
+    .where(eq(dealNotesHistory.dealId, deal_id))
+    .orderBy(asc(dealNotesHistory.pastedAt));
+
   // Steps 4–5: build and send the Gemini request.
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -137,7 +146,12 @@ export async function POST(req: Request) {
   let extraction: AdaExtraction;
   let geminiFlags: AdaFlag[];
   try {
-    const userMessage = buildUserMessage(resolvedMode, pasted_text, priorExtraction);
+    const userMessage = buildUserMessage(
+      resolvedMode,
+      pasted_text,
+      priorExtraction,
+      fullHistory,
+    );
     const result = await model.generateContent(userMessage);
     const raw = result.response.text();
     const parsed = JSON.parse(raw) as { extraction: AdaExtraction; flags: AdaFlag[] };
@@ -185,10 +199,37 @@ export async function POST(req: Request) {
     );
   }
 
+  // Enforce 10-row cap per deal. fullHistory already includes the current row
+  // (inserted in Txn A); if the total exceeds 10, delete the oldest rows.
+  if (fullHistory.length > 10) {
+    const idsToDelete = fullHistory
+      .slice(0, fullHistory.length - 10)
+      .map((h) => h.id);
+    await db
+      .delete(dealNotesHistory)
+      .where(inArray(dealNotesHistory.id, idsToDelete));
+  }
+
+  // Fetch last 3 history entries (most recent first) for the UI.
+  // Re-fetching here ensures the current row's snapshot is included.
+  const historyForUI = await db
+    .select()
+    .from(dealNotesHistory)
+    .where(eq(dealNotesHistory.dealId, deal_id))
+    .orderBy(desc(dealNotesHistory.pastedAt))
+    .limit(3);
+
   return NextResponse.json({
     extraction,
     flags: allFlags,
     mode_used: resolvedMode,
     history_id: historyId,
+    history: historyForUI.map((h) => ({
+      id: h.id,
+      pastedText: h.pastedText,
+      modeUsed: h.modeUsed,
+      pastedAt: (h.pastedAt as Date).toISOString(),
+      extractionSnapshotJson: h.extractionSnapshotJson,
+    })),
   });
 }
