@@ -688,6 +688,7 @@ export function AdaSection({
         const success = data as AdaApiSuccess;
         setResult(success);
         setPastedText("");
+        setMode("update");
         setPriorRuns(success.priorHistory);
         router.refresh();
       }
