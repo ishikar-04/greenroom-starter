@@ -460,6 +460,7 @@ export default async function ShowDetailPage({
         {deal && (
           <AdaSection
             dealId={deal.id}
+            dealNotesFreetext={deal.dealNotesFreetext ?? null}
             existingExtraction={
               deal.extractionJson
                 ? (JSON.parse(deal.extractionJson) as AdaExtraction)

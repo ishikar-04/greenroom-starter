@@ -428,10 +428,12 @@ function ExtractionResult({
 
 export function AdaSection({
   dealId,
+  dealNotesFreetext,
   existingExtraction,
   existingFlags,
 }: {
   dealId: string;
+  dealNotesFreetext: string | null;
   existingExtraction: AdaExtraction | null;
   existingFlags: AdaFlag[] | null;
 }) {
@@ -523,12 +525,23 @@ export function AdaSection({
           <CardContent className="pt-5">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label
-                  htmlFor="ada-paste"
-                  className="eyebrow text-[10px] text-ink-500 mb-2 block"
-                >
-                  Paste the latest deal email or agent communication
-                </label>
+                <div className="flex items-baseline justify-between mb-2">
+                  <label
+                    htmlFor="ada-paste"
+                    className="eyebrow text-[10px] text-ink-500"
+                  >
+                    Paste the latest deal email or agent communication
+                  </label>
+                  {dealNotesFreetext && (
+                    <button
+                      type="button"
+                      onClick={() => setPastedText(dealNotesFreetext)}
+                      className="text-[11px] text-brand-600 hover:text-brand-800 transition-colors"
+                    >
+                      ↓ Insert current deal notes
+                    </button>
+                  )}
+                </div>
                 <textarea
                   id="ada-paste"
                   value={pastedText}
