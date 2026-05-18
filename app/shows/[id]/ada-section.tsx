@@ -383,6 +383,11 @@ function DeltaPanel({ extraction }: { extraction: AdaExtraction }) {
   return (
     <div className="rounded-lg ring-1 ring-sky-200/70 bg-sky-50/50 px-5 py-4">
       <div className="eyebrow text-[10px] text-sky-700 mb-3">Changes from prior version</div>
+      {extraction.raw_text_preserved && (
+        <blockquote className="mb-4 pl-3 border-l-2 border-sky-200 text-[11.5px] text-sky-800 italic leading-relaxed whitespace-pre-wrap">
+          {extraction.raw_text_preserved}
+        </blockquote>
+      )}
       <ul className="space-y-3">
         {changes.map((c, i) => (
           <li key={i} className="text-[12.5px] text-ink-800">
@@ -415,8 +420,6 @@ function ExtractionResult({
   flags: AdaFlag[];
   modeUsed: AdaMode;
 }) {
-  const [showRawText, setShowRawText] = useState(false);
-
   const flagMap = new Map<AdaFieldAffected, AdaFlag[]>();
   for (const f of flags) {
     const existing = flagMap.get(f.field_affected) ?? [];
@@ -450,21 +453,6 @@ function ExtractionResult({
         </div>
       )}
 
-      <div className="border-t border-ink-100/80 pt-3">
-        <button
-          type="button"
-          onClick={() => setShowRawText((v) => !v)}
-          className="flex items-center gap-1.5 text-[11.5px] text-ink-400 hover:text-ink-700 transition-colors"
-        >
-          {showRawText ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-          {showRawText ? "Hide" : "View"} original pasted text
-        </button>
-        {showRawText && (
-          <div className="mt-2 text-[12px] text-ink-700 bg-canvas-soft rounded-lg p-4 ring-1 ring-ink-200/50 leading-relaxed whitespace-pre-wrap font-[450]" style={{ fontStyle: "italic" }}>
-            {extraction.raw_text_preserved}
-          </div>
-        )}
-      </div>
     </div>
   );
 }
