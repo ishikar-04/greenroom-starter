@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Sparkles, ChevronDown, ChevronUp, AlertTriangle, Info, ArrowRight, Copy, Check } from "lucide-react";
 import {
   Card,
@@ -483,6 +484,7 @@ export function AdaSection({
   existingFlags: AdaFlag[] | null;
 }) {
   const hasExisting = existingExtraction != null;
+  const router = useRouter();
 
   const [pastedText, setPastedText] = useState("");
   const [mode, setMode] = useState<AdaMode>(hasExisting ? "update" : "initial");
@@ -542,6 +544,7 @@ export function AdaSection({
       } else {
         setResult(data as AdaApiSuccess);
         setShowForm(false);
+        router.refresh();
       }
     } catch {
       setError("Network error. Your input has been saved if it reached the server.");
