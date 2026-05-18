@@ -12,13 +12,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type {
-  AdaExtraction,
-  AdaFlag,
-  AdaFieldAffected,
-  AdaMode,
-  AdaApiSuccess,
-  AdaHistoryEntry,
-} from "@/lib/ada/types";
+  AidaExtraction,
+  AidaFlag,
+  AidaFieldAffected,
+  AidaMode,
+  AidaApiSuccess,
+  AidaHistoryEntry,
+} from "@/lib/aida/types";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -28,7 +28,7 @@ const LOADING_MESSAGES = [
   "Checking for ambiguities...",
 ];
 
-const FLAG_CLASS_LABELS: Record<AdaFlag["flag_class"], string> = {
+const FLAG_CLASS_LABELS: Record<AidaFlag["flag_class"], string> = {
   ambiguous_net: "Ambiguous net definition",
   external_reference: "Terms in external document",
   computed_threshold: "Computed threshold",
@@ -39,7 +39,7 @@ const FLAG_CLASS_LABELS: Record<AdaFlag["flag_class"], string> = {
   other: "Advisory",
 };
 
-const MODE_LABELS: Record<AdaMode, string> = {
+const MODE_LABELS: Record<AidaMode, string> = {
   initial: "Initial",
   update: "Update",
   replace: "Replace",
@@ -104,7 +104,7 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-function FlagItem({ flag, inline = false }: { flag: AdaFlag; inline?: boolean }) {
+function FlagItem({ flag, inline = false }: { flag: AidaFlag; inline?: boolean }) {
   return (
     <div
       className={cn(
@@ -174,7 +174,7 @@ function FieldRow({
 }: {
   label: string;
   value: React.ReactNode;
-  flags?: AdaFlag[];
+  flags?: AidaFlag[];
 }) {
   return (
     <div>
@@ -189,8 +189,8 @@ function CoreTermsCard({
   extraction,
   flagMap,
 }: {
-  extraction: AdaExtraction;
-  flagMap: Map<AdaFieldAffected, AdaFlag[]>;
+  extraction: AidaExtraction;
+  flagMap: Map<AidaFieldAffected, AidaFlag[]>;
 }) {
   if (extraction.guarantee_amount == null) return null;
   return (
@@ -213,8 +213,8 @@ function PercentageSplitCard({
   extraction,
   flagMap,
 }: {
-  extraction: AdaExtraction;
-  flagMap: Map<AdaFieldAffected, AdaFlag[]>;
+  extraction: AidaExtraction;
+  flagMap: Map<AidaFieldAffected, AidaFlag[]>;
 }) {
   if (extraction.percentage == null && extraction.percentage_basis == null) return null;
   return (
@@ -248,8 +248,8 @@ function CapsCard({
   extraction,
   flagMap,
 }: {
-  extraction: AdaExtraction;
-  flagMap: Map<AdaFieldAffected, AdaFlag[]>;
+  extraction: AidaExtraction;
+  flagMap: Map<AidaFieldAffected, AidaFlag[]>;
 }) {
   if (extraction.expense_cap == null && extraction.hospitality_cap == null) return null;
   return (
@@ -281,8 +281,8 @@ function EscalatorsCard({
   extraction,
   flagMap,
 }: {
-  extraction: AdaExtraction;
-  flagMap: Map<AdaFieldAffected, AdaFlag[]>;
+  extraction: AidaExtraction;
+  flagMap: Map<AidaFieldAffected, AidaFlag[]>;
 }) {
   const hasAny =
     extraction.ratchet != null ||
@@ -338,8 +338,8 @@ function BonusesCard({
   extraction,
   flagMap,
 }: {
-  extraction: AdaExtraction;
-  flagMap: Map<AdaFieldAffected, AdaFlag[]>;
+  extraction: AidaExtraction;
+  flagMap: Map<AidaFieldAffected, AidaFlag[]>;
 }) {
   if (!extraction.bonuses || extraction.bonuses.length === 0) return null;
 
@@ -381,7 +381,7 @@ function DeltaPanel({
   currentRunText,
   priorRunText,
 }: {
-  extraction: AdaExtraction;
+  extraction: AidaExtraction;
   currentRunText?: string;
   priorRunText?: string;
 }) {
@@ -438,12 +438,12 @@ function ExtractionResult({
   modeUsed,
   priorRunText,
 }: {
-  extraction: AdaExtraction;
-  flags: AdaFlag[];
-  modeUsed: AdaMode;
+  extraction: AidaExtraction;
+  flags: AidaFlag[];
+  modeUsed: AidaMode;
   priorRunText?: string;
 }) {
-  const flagMap = new Map<AdaFieldAffected, AdaFlag[]>();
+  const flagMap = new Map<AidaFieldAffected, AidaFlag[]>();
   for (const f of flags) {
     const existing = flagMap.get(f.field_affected) ?? [];
     flagMap.set(f.field_affected, [...existing, f]);
@@ -478,7 +478,7 @@ function ExtractionResult({
       {extraction.complex_structure && (
         <div className="flex items-center gap-2 text-[12px] text-ink-500 pt-1">
           <Info className="h-3.5 w-3.5" />
-          Ada marked this deal as complex — it may not fit the standard schema cleanly. Review the original text.
+          Aida marked this deal as complex — it may not fit the standard schema cleanly. Review the original text.
         </div>
       )}
 
@@ -488,12 +488,12 @@ function ExtractionResult({
 
 // ─── Prior runs accordion ────────────────────────────────────────────────────
 
-function PriorRunItem({ run }: { run: AdaHistoryEntry }) {
+function PriorRunItem({ run }: { run: AidaHistoryEntry }) {
   const [expanded, setExpanded] = useState(false);
   const [showBreakdown, setShowBreakdown] = useState(false);
 
   // Parse snapshot once; treat malformed JSON the same as null.
-  let snapshotData: { extraction: AdaExtraction; flags: AdaFlag[] } | null = null;
+  let snapshotData: { extraction: AidaExtraction; flags: AidaFlag[] } | null = null;
   if (run.extractionSnapshotJson) {
     try {
       snapshotData = JSON.parse(run.extractionSnapshotJson);
@@ -574,7 +574,7 @@ function PriorRunItem({ run }: { run: AdaHistoryEntry }) {
   );
 }
 
-function PriorRunsAccordion({ runs }: { runs: AdaHistoryEntry[] }) {
+function PriorRunsAccordion({ runs }: { runs: AidaHistoryEntry[] }) {
   const [open, setOpen] = useState(false);
 
   if (runs.length === 0) return null;
@@ -606,7 +606,7 @@ function PriorRunsAccordion({ runs }: { runs: AdaHistoryEntry[] }) {
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
-export function AdaSection({
+export function AidaSection({
   dealId,
   dealNotesFreetext,
   existingExtraction,
@@ -615,20 +615,20 @@ export function AdaSection({
 }: {
   dealId: string;
   dealNotesFreetext: string | null;
-  existingExtraction: AdaExtraction | null;
-  existingFlags: AdaFlag[] | null;
-  existingHistory: AdaHistoryEntry[]; // all rows for this deal, DESC by pastedAt, limit 4
+  existingExtraction: AidaExtraction | null;
+  existingFlags: AidaFlag[] | null;
+  existingHistory: AidaHistoryEntry[]; // all rows for this deal, DESC by pastedAt, limit 4
 }) {
   const router = useRouter();
 
   const [pastedText, setPastedText] = useState("");
-  const [mode, setMode] = useState<AdaMode>(existingExtraction != null ? "update" : "initial");
+  const [mode, setMode] = useState<AidaMode>(existingExtraction != null ? "update" : "initial");
   const [isLoading, setIsLoading] = useState(false);
   const [loadingPhase, setLoadingPhase] = useState(0);
-  const [result, setResult] = useState<AdaApiSuccess | null>(null);
+  const [result, setResult] = useState<AidaApiSuccess | null>(null);
   const [error, setError] = useState<string | null>(null);
   // existingHistory[0] is the most-recent (= current) row; slice(1) gives prior runs.
-  const [priorRuns, setPriorRuns] = useState<AdaHistoryEntry[]>(existingHistory.slice(1));
+  const [priorRuns, setPriorRuns] = useState<AidaHistoryEntry[]>(existingHistory.slice(1));
 
   const loadingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -670,7 +670,7 @@ export function AdaSection({
     setError(null);
 
     try {
-      const res = await fetch("/api/ada/extract", {
+      const res = await fetch("/api/aida/extract", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -685,7 +685,7 @@ export function AdaSection({
       if (!res.ok || "error" in data) {
         setError(data.error ?? "Something went wrong. Please try again.");
       } else {
-        const success = data as AdaApiSuccess;
+        const success = data as AidaApiSuccess;
         setResult(success);
         setPastedText("");
         setMode("update");
@@ -703,7 +703,7 @@ export function AdaSection({
     <div className="mt-8">
       <div className="flex items-center gap-2 mb-4">
         <Sparkles className="h-4 w-4 text-brand-600" />
-        <h2 className="text-[13px] font-semibold text-ink-900 tracking-tight">Ask Ada</h2>
+        <h2 className="text-[13px] font-semibold text-ink-900 tracking-tight">Ask Aida</h2>
         <span className="text-[11px] text-ink-400">· Deal disambiguation assistant</span>
       </div>
 
@@ -713,13 +713,13 @@ export function AdaSection({
           <ExtractionResult
             extraction={displayExtraction}
             flags={displayFlags}
-            modeUsed={displayMode as AdaMode}
+            modeUsed={displayMode as AidaMode}
             priorRunText={priorRuns[0]?.pastedText}
           />
         </div>
       )}
 
-      {/* 2. Ask Ada container */}
+      {/* 2. Ask Aida container */}
       <Card>
         <CardContent className="pt-5">
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -727,14 +727,14 @@ export function AdaSection({
               <div className="rounded-md ring-1 ring-amber-200/70 bg-amber-50/60 px-4 py-3 flex items-start gap-2">
                 <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
                 <p className="text-[12px] text-amber-800">
-                  Last Ada run failed — your input was preserved. Run Ada again to retry.
+                  Last Aida run failed — your input was preserved. Run Aida again to retry.
                 </p>
               </div>
             )}
             <div>
               <div className="flex items-baseline justify-between mb-2">
                 <label
-                  htmlFor="ada-paste"
+                  htmlFor="aida-paste"
                   className="eyebrow text-[10px] text-ink-500"
                 >
                   Paste the latest deal email or agent communication
@@ -750,7 +750,7 @@ export function AdaSection({
                 )}
               </div>
               <textarea
-                id="ada-paste"
+                id="aida-paste"
                 value={pastedText}
                 onChange={(e) => setPastedText(e.target.value)}
                 placeholder="Paste deal email here..."
@@ -775,7 +775,7 @@ export function AdaSection({
                   >
                     <input
                       type="radio"
-                      name="ada-mode"
+                      name="aida-mode"
                       value={m}
                       checked={mode === m}
                       onChange={() => setMode(m)}
@@ -807,7 +807,7 @@ export function AdaSection({
               ) : (
                 <>
                   <Sparkles className="h-3.5 w-3.5" />
-                  Ask Ada
+                  Ask Aida
                 </>
               )}
             </Button>

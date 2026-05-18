@@ -1,4 +1,4 @@
-import type { AdaExtraction, AdaMode } from "./types";
+import type { AidaExtraction, AidaMode } from "./types";
 
 const DEAL_TYPE_GUIDE = `
 ## Deal types and which fields apply
@@ -60,15 +60,15 @@ ${AMBIGUITY_CLASS_GUIDE}
 }
 
 type HistoryRow = {
-  modeUsed: AdaMode;
+  modeUsed: AidaMode;
   pastedAt: Date | string;
   extractionSnapshotJson: string | null;
 };
 
 export function buildUserMessage(
-  mode: AdaMode,
+  mode: AidaMode,
   pastedText: string,
-  priorExtraction?: AdaExtraction | null,
+  priorExtraction?: AidaExtraction | null,
   history?: HistoryRow[] | null,
 ): string {
   if (mode === "update" && priorExtraction) {

@@ -3,18 +3,18 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { db } from "@/db";
 import { deals, dealNotesHistory } from "@/db/schema";
 import { eq, asc, desc, inArray } from "drizzle-orm";
-import { buildSystemPrompt, buildUserMessage } from "@/lib/ada/prompts";
-import { geminiResponseSchema } from "@/lib/ada/schemas";
+import { buildSystemPrompt, buildUserMessage } from "@/lib/aida/prompts";
+import { geminiResponseSchema } from "@/lib/aida/schemas";
 import type {
-  AdaApiRequest,
-  AdaExtraction,
-  AdaFlag,
-  AdaMode,
-} from "@/lib/ada/types";
+  AidaApiRequest,
+  AidaExtraction,
+  AidaFlag,
+  AidaMode,
+} from "@/lib/aida/types";
 
 const BRACKETED_UPDATE_RE = /\[[\s\S]*?\]/;
 
-function makeBracketedUpdateFlag(match: string): AdaFlag {
+function makeBracketedUpdateFlag(match: string): AidaFlag {
   return {
     flag_class: "bracketed_update",
     field_affected: "global",
@@ -25,19 +25,19 @@ function makeBracketedUpdateFlag(match: string): AdaFlag {
   };
 }
 
-function makeModeFallbackFlag(): AdaFlag {
+function makeModeFallbackFlag(): AidaFlag {
   return {
     flag_class: "mode_fallback",
     field_affected: "global",
     description:
-      "Update mode was requested but no prior extraction exists for this deal. Ada ran as Initial extraction instead.",
+      "Update mode was requested but no prior extraction exists for this deal. Aida ran as Initial extraction instead.",
     evidence_quote: null,
     suggested_question: null,
   };
 }
 
 export async function POST(req: Request) {
-  let body: AdaApiRequest;
+  let body: AidaApiRequest;
   try {
     body = await req.json();
   } catch {
@@ -67,7 +67,7 @@ export async function POST(req: Request) {
       });
     });
   } catch (err) {
-    console.error("[Ada] Failed to persist history row:", err);
+    console.error("[Aida] Failed to persist history row:", err);
     return NextResponse.json(
       { error: "Failed to save input. Please try again." },
       { status: 500 },
@@ -75,7 +75,7 @@ export async function POST(req: Request) {
   }
 
   // Step 2: deterministic bracketed_update check (before Gemini).
-  const pendingFlags: AdaFlag[] = [];
+  const pendingFlags: AidaFlag[] = [];
   const bracketMatch = pasted_text.match(BRACKETED_UPDATE_RE);
   if (bracketMatch) {
     pendingFlags.push(makeBracketedUpdateFlag(bracketMatch[0]));
@@ -83,8 +83,8 @@ export async function POST(req: Request) {
 
   // Step 3: mode resolution — if Update requested but no prior extraction exists,
   // fall back to Initial and queue an advisory flag.
-  let resolvedMode: AdaMode = mode;
-  let priorExtraction: AdaExtraction | null = null;
+  let resolvedMode: AidaMode = mode;
+  let priorExtraction: AidaExtraction | null = null;
 
   const dealRow = await db.query.deals.findFirst({
     where: eq(deals.id, deal_id),
@@ -99,7 +99,7 @@ export async function POST(req: Request) {
 
   if (dealRow.extractionJson) {
     try {
-      priorExtraction = JSON.parse(dealRow.extractionJson) as AdaExtraction;
+      priorExtraction = JSON.parse(dealRow.extractionJson) as AidaExtraction;
     } catch {
       priorExtraction = null;
     }
@@ -143,8 +143,8 @@ export async function POST(req: Request) {
     },
   });
 
-  let extraction: AdaExtraction;
-  let geminiFlags: AdaFlag[];
+  let extraction: AidaExtraction;
+  let geminiFlags: AidaFlag[];
   try {
     // Exclude the current in-flight row (null snapshot) and pass at most the
   // 3 most-recent prior rows (oldest → newest) as history context.
@@ -160,14 +160,14 @@ export async function POST(req: Request) {
     );
     const result = await model.generateContent(userMessage);
     const raw = result.response.text();
-    const parsed = JSON.parse(raw) as { extraction: AdaExtraction; flags: AdaFlag[] };
+    const parsed = JSON.parse(raw) as { extraction: AidaExtraction; flags: AidaFlag[] };
     extraction = parsed.extraction;
     geminiFlags = parsed.flags ?? [];
   } catch (err) {
-    console.error("[Ada] Gemini call failed:", err);
+    console.error("[Aida] Gemini call failed:", err);
     return NextResponse.json(
       {
-        error: "Ada could not process the email. Your input has been saved — try again.",
+        error: "Aida could not process the email. Your input has been saved — try again.",
         history_id: historyId,
       },
       { status: 502 },
@@ -175,7 +175,7 @@ export async function POST(req: Request) {
   }
 
   // Step 6 (Transaction B): append deterministic flags and persist results.
-  const allFlags: AdaFlag[] = [...geminiFlags, ...pendingFlags];
+  const allFlags: AidaFlag[] = [...geminiFlags, ...pendingFlags];
   const extractionJson = JSON.stringify(extraction);
   const flagsJson = JSON.stringify(allFlags);
 
@@ -195,10 +195,10 @@ export async function POST(req: Request) {
         .where(eq(deals.id, deal_id));
     });
   } catch (err) {
-    console.error("[Ada] Failed to persist extraction results:", err);
+    console.error("[Aida] Failed to persist extraction results:", err);
     return NextResponse.json(
       {
-        error: "Ada extracted the deal but failed to save the results. Your original input is preserved.",
+        error: "Aida extracted the deal but failed to save the results. Your original input is preserved.",
         history_id: historyId,
       },
       { status: 500 },

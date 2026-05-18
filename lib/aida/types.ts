@@ -1,13 +1,13 @@
-export type AdaMode = "initial" | "update" | "replace";
+export type AidaMode = "initial" | "update" | "replace";
 
-export type AdaDealType =
+export type AidaDealType =
   | "flat"
   | "vs"
   | "percentage_of_net"
   | "percentage_of_gross"
   | "door";
 
-export type AdaFlagClass =
+export type AidaFlagClass =
   | "ambiguous_net"
   | "external_reference"
   | "computed_threshold"
@@ -17,7 +17,7 @@ export type AdaFlagClass =
   | "mode_fallback"
   | "other";
 
-export type AdaFieldAffected =
+export type AidaFieldAffected =
   | "guarantee_amount"
   | "percentage"
   | "percentage_basis"
@@ -28,24 +28,24 @@ export type AdaFieldAffected =
   | "bonuses"
   | "global";
 
-export interface AdaRatchet {
+export interface AidaRatchet {
   base_percent: number;
   cap_percent: number;
   trigger_capacity_pct: number;
 }
 
-export interface AdaWalkoutPot {
+export interface AidaWalkoutPot {
   threshold_amount: number;
   threshold_source: "stated" | "computed";
 }
 
-export interface AdaTieredNetSplit {
+export interface AidaTieredNetSplit {
   low_percent: number;
   high_percent: number;
   threshold_gross: number;
 }
 
-export interface AdaBonus {
+export interface AidaBonus {
   type: "sellout" | "gross_threshold" | "attendance_threshold";
   trigger: string;
   amount: number;
@@ -59,55 +59,55 @@ export interface ChangeFromPrevious {
   evidence_quote: string;
 }
 
-export interface AdaExtraction {
-  deal_type: AdaDealType;
+export interface AidaExtraction {
+  deal_type: AidaDealType;
   guarantee_amount: number | null;
   percentage: number | null;
   percentage_basis: "gross" | "net" | null;
   expense_cap: number | null;
   hospitality_cap: number | null;
-  ratchet: AdaRatchet | null;
-  walkout_pot: AdaWalkoutPot | null;
-  tiered_net_split: AdaTieredNetSplit | null;
-  bonuses: AdaBonus[];
+  ratchet: AidaRatchet | null;
+  walkout_pot: AidaWalkoutPot | null;
+  tiered_net_split: AidaTieredNetSplit | null;
+  bonuses: AidaBonus[];
   complex_structure: boolean;
   raw_text_preserved: string;
   changes_from_previous?: ChangeFromPrevious[] | null;
 }
 
-export interface AdaFlag {
-  flag_class: AdaFlagClass;
-  field_affected: AdaFieldAffected;
+export interface AidaFlag {
+  flag_class: AidaFlagClass;
+  field_affected: AidaFieldAffected;
   description: string;
   evidence_quote: string | null;
   suggested_question: string | null;
 }
 
-export interface AdaApiRequest {
+export interface AidaApiRequest {
   deal_id: string;
   pasted_text: string;
-  mode: AdaMode;
+  mode: AidaMode;
 }
 
-export interface AdaHistoryEntry {
+export interface AidaHistoryEntry {
   id: string;
   pastedText: string;
-  modeUsed: AdaMode;
+  modeUsed: AidaMode;
   pastedAt: string; // ISO string
   extractionSnapshotJson: string | null;
 }
 
-export interface AdaApiSuccess {
-  extraction: AdaExtraction;
-  flags: AdaFlag[];
-  mode_used: AdaMode;
+export interface AidaApiSuccess {
+  extraction: AidaExtraction;
+  flags: AidaFlag[];
+  mode_used: AidaMode;
   history_id: string;
-  priorHistory: AdaHistoryEntry[]; // 3 prior rows, excluding current run, most recent first
+  priorHistory: AidaHistoryEntry[]; // 3 prior rows, excluding current run, most recent first
 }
 
-export interface AdaApiError {
+export interface AidaApiError {
   error: string;
   history_id: string;
 }
 
-export type AdaApiResponse = AdaApiSuccess | AdaApiError;
+export type AidaApiResponse = AidaApiSuccess | AidaApiError;

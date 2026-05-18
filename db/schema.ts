@@ -125,14 +125,14 @@ export const deals = sqliteTable("deals", {
   bonusesJson: text("bonuses_json"),
   dealNotesFreetext: text("deal_notes_freetext"),
 
-  // Ada — current structured extraction and flags (overwritten on each run)
+  // Aida — current structured extraction and flags (overwritten on each run)
   extractionJson: text("extraction_json"),
   ambiguityFlagsJson: text("ambiguity_flags_json"),
 
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
 
-// -------- Ada: deal notes history (append-only) --------
+// -------- Aida: deal notes history (append-only) --------
 
 export const dealNotesHistory = sqliteTable("deal_notes_history", {
   id: text("id").primaryKey(),

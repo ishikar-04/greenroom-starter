@@ -7,8 +7,8 @@ import {
   Clock,
   TrendingUp,
 } from "lucide-react";
-import { AdaSection } from "./ada-section";
-import type { AdaExtraction, AdaFlag } from "@/lib/ada/types";
+import { AidaSection } from "./aida-section";
+import type { AidaExtraction, AidaFlag } from "@/lib/aida/types";
 import { getShowById } from "@/lib/queries";
 import { db } from "@/db";
 import { dealNotesHistory } from "@/db/schema";
@@ -468,19 +468,19 @@ export default async function ShowDetailPage({
           </Card>
         </div>
 
-        {/* Ada — deal disambiguation assistant */}
+        {/* Aida — deal disambiguation assistant */}
         {deal && (
-          <AdaSection
+          <AidaSection
             dealId={deal.id}
             dealNotesFreetext={deal.dealNotesFreetext ?? null}
             existingExtraction={
               deal.extractionJson
-                ? (JSON.parse(deal.extractionJson) as AdaExtraction)
+                ? (JSON.parse(deal.extractionJson) as AidaExtraction)
                 : null
             }
             existingFlags={
               deal.ambiguityFlagsJson
-                ? (JSON.parse(deal.ambiguityFlagsJson) as AdaFlag[])
+                ? (JSON.parse(deal.ambiguityFlagsJson) as AidaFlag[])
                 : null
             }
             existingHistory={adaHistory.map((h) => ({
