@@ -262,6 +262,12 @@ export default async function ShowDetailPage({
                       </div>
                     </div>
                   )}
+                  <a
+                    href="#aida-section"
+                    className="text-[11.5px] text-ink-400 hover:text-ink-700 transition-colors"
+                  >
+                    Confusing deal terms? Check with Aida ↓
+                  </a>
                 </>
               ) : (
                 <div className="text-[13px] text-ink-400">

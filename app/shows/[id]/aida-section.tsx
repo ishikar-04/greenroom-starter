@@ -700,7 +700,7 @@ export function AidaSection({
   }
 
   return (
-    <div className="mt-8">
+    <div className="mt-8" id="aida-section">
       <div className="flex items-center gap-2 mb-4">
         <Sparkles className="h-4 w-4 text-brand-600" />
         <h2 className="text-[13px] font-semibold text-ink-900 tracking-tight">Ask Aida</h2>
