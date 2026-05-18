@@ -69,7 +69,7 @@ export default async function ShowDetailPage({
         .from(dealNotesHistory)
         .where(eq(dealNotesHistory.dealId, deal.id))
         .orderBy(desc(dealNotesHistory.pastedAt))
-        .limit(3)
+        .limit(4)
     : [];
 
   const grossSoFar = ticketSales.reduce((sum, t) => sum + t.gross, 0);

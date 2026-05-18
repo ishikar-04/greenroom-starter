@@ -469,59 +469,125 @@ function ExtractionResult({
   );
 }
 
-// ─── History panel ───────────────────────────────────────────────────────────
+// ─── Prior runs accordion ────────────────────────────────────────────────────
 
-function HistoryEntryItem({ entry }: { entry: AdaHistoryEntry }) {
+function PriorRunItem({ run }: { run: AdaHistoryEntry }) {
   const [expanded, setExpanded] = useState(false);
+  const [showBreakdown, setShowBreakdown] = useState(false);
 
   const snippet =
-    entry.pastedText.length > 80
-      ? entry.pastedText.slice(0, 80) + "…"
-      : entry.pastedText;
+    run.pastedText.length > 80
+      ? run.pastedText.slice(0, 80) + "…"
+      : run.pastedText;
 
+  // Parse snapshot once; treat malformed JSON the same as null.
   let snapshotData: { extraction: AdaExtraction; flags: AdaFlag[] } | null = null;
-  if (entry.extractionSnapshotJson) {
+  if (run.extractionSnapshotJson) {
     try {
-      snapshotData = JSON.parse(entry.extractionSnapshotJson);
+      snapshotData = JSON.parse(run.extractionSnapshotJson);
     } catch {
-      // malformed snapshot — show failure state
+      // malformed — falls through to failure state
     }
   }
+  const hasSnapshot = snapshotData !== null;
 
   return (
-    <div className="rounded-lg ring-1 ring-ink-200/60 bg-white px-4 py-3">
-      <div className="flex items-start justify-between gap-3">
+    <div className="rounded-lg ring-1 ring-ink-200/60 bg-white overflow-hidden">
+      {/* Header row — click to expand/collapse */}
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full flex items-start justify-between gap-3 px-4 py-3 text-left hover:bg-ink-50/40 transition-colors"
+      >
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[11px] text-ink-500">{formatTimestamp(entry.pastedAt)}</span>
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="text-[11px] text-ink-500">{formatTimestamp(run.pastedAt)}</span>
             <span className="text-ink-300">·</span>
-            <span className="text-[11px] text-ink-500">{MODE_LABELS[entry.modeUsed]}</span>
+            <span className="text-[11px] text-ink-500">{MODE_LABELS[run.modeUsed]}</span>
           </div>
           <p className="text-[12px] text-ink-600 leading-relaxed">{snippet}</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className="flex items-center gap-1 text-[11px] text-ink-400 hover:text-ink-700 transition-colors shrink-0 mt-0.5"
-          aria-label={expanded ? "Collapse" : "Expand"}
-        >
-          {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-        </button>
-      </div>
+        {expanded
+          ? <ChevronUp className="h-3.5 w-3.5 text-ink-400 shrink-0 mt-1" />
+          : <ChevronDown className="h-3.5 w-3.5 text-ink-400 shrink-0 mt-1" />
+        }
+      </button>
 
+      {/* Expanded body */}
       {expanded && (
-        <div className="mt-3 pt-3 border-t border-ink-100/80">
-          {snapshotData ? (
-            <ExtractionResult
-              extraction={snapshotData.extraction}
-              flags={snapshotData.flags}
-              modeUsed={entry.modeUsed}
-            />
-          ) : (
-            <p className="text-[12px] text-ink-400 italic">
-              Extraction failed — input preserved
-            </p>
-          )}
+        <div className="px-4 pb-4 border-t border-ink-100/80">
+          {/* Full submitted text */}
+          <div className="mt-3">
+            <div className="eyebrow text-[10px] text-ink-500 mb-2">Submitted text</div>
+            <div
+              className="text-[12px] text-ink-700 bg-canvas-soft rounded-lg p-4 ring-1 ring-ink-200/50 leading-relaxed whitespace-pre-wrap font-[450]"
+              style={{ fontStyle: "italic" }}
+            >
+              {run.pastedText}
+            </div>
+          </div>
+
+          {/* Extraction breakdown */}
+          <div className="mt-3">
+            {!run.extractionSnapshotJson || !hasSnapshot ? (
+              <p className="text-[12px] text-ink-400 italic">
+                Extraction failed — input preserved
+              </p>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowBreakdown((v) => !v)}
+                  className="flex items-center gap-1.5 text-[11.5px] text-ink-400 hover:text-ink-700 transition-colors"
+                >
+                  {showBreakdown
+                    ? <ChevronUp className="h-3.5 w-3.5" />
+                    : <ChevronDown className="h-3.5 w-3.5" />
+                  }
+                  {showBreakdown ? "Hide" : "View"} extraction breakdown
+                </button>
+                {showBreakdown && (
+                  <div className="mt-4">
+                    <ExtractionResult
+                      extraction={snapshotData!.extraction}
+                      flags={snapshotData!.flags}
+                      modeUsed={run.modeUsed}
+                    />
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PriorRunsAccordion({ runs }: { runs: AdaHistoryEntry[] }) {
+  const [open, setOpen] = useState(false);
+
+  if (runs.length === 0) return null;
+
+  return (
+    <div className="mt-4">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 text-[12px] text-ink-500 hover:text-ink-800 transition-colors"
+      >
+        {open
+          ? <ChevronUp className="h-3.5 w-3.5" />
+          : <ChevronDown className="h-3.5 w-3.5" />
+        }
+        Previous runs ({runs.length})
+      </button>
+
+      {open && (
+        <div className="mt-3 space-y-2">
+          {runs.map((run) => (
+            <PriorRunItem key={run.id} run={run} />
+          ))}
         </div>
       )}
     </div>
@@ -541,7 +607,7 @@ export function AdaSection({
   dealNotesFreetext: string | null;
   existingExtraction: AdaExtraction | null;
   existingFlags: AdaFlag[] | null;
-  existingHistory: AdaHistoryEntry[];
+  existingHistory: AdaHistoryEntry[]; // all rows for this deal, DESC by pastedAt, limit 4
 }) {
   const router = useRouter();
 
@@ -551,7 +617,8 @@ export function AdaSection({
   const [loadingPhase, setLoadingPhase] = useState(0);
   const [result, setResult] = useState<AdaApiSuccess | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [history, setHistory] = useState<AdaHistoryEntry[]>(existingHistory);
+  // existingHistory[0] is the most-recent (= current) row; slice(1) gives prior runs.
+  const [priorRuns, setPriorRuns] = useState<AdaHistoryEntry[]>(existingHistory.slice(1));
 
   const loadingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -605,7 +672,7 @@ export function AdaSection({
         const success = data as AdaApiSuccess;
         setResult(success);
         setPastedText("");
-        if (success.history) setHistory(success.history);
+        setPriorRuns(success.priorHistory);
         router.refresh();
       }
     } catch {
@@ -623,7 +690,7 @@ export function AdaSection({
         <span className="text-[11px] text-ink-400">· Deal disambiguation assistant</span>
       </div>
 
-      {/* Current extraction results */}
+      {/* 1. Current extraction results */}
       {displayExtraction && displayFlags && (
         <div className="mb-6">
           <ExtractionResult
@@ -634,19 +701,7 @@ export function AdaSection({
         </div>
       )}
 
-      {/* Version history — last 3 runs */}
-      {history.length > 0 && (
-        <div className="mb-6">
-          <div className="eyebrow text-[10px] text-ink-500 mb-2">Recent runs</div>
-          <div className="space-y-2">
-            {history.slice(0, 3).map((entry) => (
-              <HistoryEntryItem key={entry.id} entry={entry} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Paste form — always visible */}
+      {/* 2. Ask Ada container */}
       <Card>
         <CardContent className="pt-5">
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -733,6 +788,9 @@ export function AdaSection({
           </form>
         </CardContent>
       </Card>
+
+      {/* 3. Prior runs accordion */}
+      <PriorRunsAccordion runs={priorRuns} />
     </div>
   );
 }

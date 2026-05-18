@@ -146,11 +146,17 @@ export async function POST(req: Request) {
   let extraction: AdaExtraction;
   let geminiFlags: AdaFlag[];
   try {
-    const userMessage = buildUserMessage(
+    // Exclude the current in-flight row (null snapshot) and pass at most the
+  // 3 most-recent prior rows (oldest → newest) as history context.
+  const priorRowsForGemini = fullHistory
+    .filter((h) => h.id !== historyId)
+    .slice(-3);
+
+  const userMessage = buildUserMessage(
       resolvedMode,
       pasted_text,
       priorExtraction,
-      fullHistory,
+      priorRowsForGemini,
     );
     const result = await model.generateContent(userMessage);
     const raw = result.response.text();
@@ -199,37 +205,37 @@ export async function POST(req: Request) {
     );
   }
 
-  // Enforce 10-row cap per deal. fullHistory already includes the current row
-  // (inserted in Txn A); if the total exceeds 10, delete the oldest rows.
-  if (fullHistory.length > 10) {
+  // Enforce 4-row cap per deal. fullHistory already includes the current row
+  // (inserted in Txn A); if the total exceeds 4, delete the oldest rows.
+  if (fullHistory.length > 4) {
     const idsToDelete = fullHistory
-      .slice(0, fullHistory.length - 10)
+      .slice(0, fullHistory.length - 4)
       .map((h) => h.id);
     await db
       .delete(dealNotesHistory)
       .where(inArray(dealNotesHistory.id, idsToDelete));
   }
 
-  // Fetch last 3 history entries (most recent first) for the UI.
-  // Re-fetching here ensures the current row's snapshot is included.
-  const historyForUI = await db
-    .select()
-    .from(dealNotesHistory)
-    .where(eq(dealNotesHistory.dealId, deal_id))
-    .orderBy(desc(dealNotesHistory.pastedAt))
-    .limit(3);
+  // Build priorHistory from the in-memory list: exclude the current row,
+  // take at most 3, flip to most-recent-first. No re-fetch needed because
+  // the prior rows' snapshots were not modified in this request.
+  const priorHistory = fullHistory
+    .filter((h) => h.id !== historyId)
+    .slice(-3)
+    .reverse()
+    .map((h) => ({
+      id: h.id,
+      pastedText: h.pastedText,
+      modeUsed: h.modeUsed,
+      pastedAt: (h.pastedAt as Date).toISOString(),
+      extractionSnapshotJson: h.extractionSnapshotJson,
+    }));
 
   return NextResponse.json({
     extraction,
     flags: allFlags,
     mode_used: resolvedMode,
     history_id: historyId,
-    history: historyForUI.map((h) => ({
-      id: h.id,
-      pastedText: h.pastedText,
-      modeUsed: h.modeUsed,
-      pastedAt: (h.pastedAt as Date).toISOString(),
-      extractionSnapshotJson: h.extractionSnapshotJson,
-    })),
+    priorHistory,
   });
 }

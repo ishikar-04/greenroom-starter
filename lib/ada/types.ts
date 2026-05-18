@@ -102,7 +102,7 @@ export interface AdaApiSuccess {
   flags: AdaFlag[];
   mode_used: AdaMode;
   history_id: string;
-  history: AdaHistoryEntry[]; // last 3, most recent first
+  priorHistory: AdaHistoryEntry[]; // 3 prior rows, excluding current run, most recent first
 }
 
 export interface AdaApiError {
