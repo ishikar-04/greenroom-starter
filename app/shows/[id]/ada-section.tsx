@@ -376,35 +376,56 @@ function BonusesCard({
 
 // ─── Delta panel (Update mode) ───────────────────────────────────────────────
 
-function DeltaPanel({ extraction }: { extraction: AdaExtraction }) {
+function DeltaPanel({
+  extraction,
+  currentRunText,
+  priorRunText,
+}: {
+  extraction: AdaExtraction;
+  currentRunText?: string;
+  priorRunText?: string;
+}) {
   const changes = extraction.changes_from_previous;
   if (!changes || changes.length === 0) return null;
 
   return (
-    <div className="rounded-lg ring-1 ring-sky-200/70 bg-sky-50/50 px-5 py-4">
-      <div className="eyebrow text-[10px] text-sky-700 mb-3">Changes from prior version</div>
-      {extraction.raw_text_preserved && (
-        <blockquote className="mb-4 pl-3 border-l-2 border-sky-200 text-[11.5px] text-sky-800 italic leading-relaxed whitespace-pre-wrap">
-          {extraction.raw_text_preserved}
-        </blockquote>
+    <div className="rounded-lg ring-1 ring-sky-200/70 bg-sky-50/50 px-5 py-4 space-y-4">
+      {currentRunText && (
+        <div>
+          <div className="eyebrow text-[9px] text-sky-600 mb-1.5">Current run</div>
+          <blockquote className="pl-3 border-l-2 border-sky-300 text-[11.5px] text-sky-900 italic leading-relaxed whitespace-pre-wrap">
+            {currentRunText}
+          </blockquote>
+        </div>
       )}
-      <ul className="space-y-3">
-        {changes.map((c, i) => (
-          <li key={i} className="text-[12.5px] text-ink-800">
-            <div className="font-mono text-[11px] text-ink-500 mb-0.5">{c.field_path}</div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-ink-500 line-through">{String(c.previous_value ?? "—")}</span>
-              <ArrowRight className="h-3 w-3 text-ink-400 shrink-0" />
-              <span className="font-medium text-ink-900">{String(c.new_value ?? "—")}</span>
-            </div>
-            {c.evidence_quote && (
-              <blockquote className="mt-1 pl-2 border-l-2 border-sky-300 text-[11px] text-sky-700 italic">
-                &ldquo;{c.evidence_quote}&rdquo;
-              </blockquote>
-            )}
-          </li>
-        ))}
-      </ul>
+      {priorRunText && (
+        <div>
+          <div className="eyebrow text-[9px] text-sky-500 mb-1.5">Previous run</div>
+          <blockquote className="pl-3 border-l-2 border-sky-200 text-[11.5px] text-sky-700/60 italic leading-relaxed whitespace-pre-wrap">
+            {priorRunText}
+          </blockquote>
+        </div>
+      )}
+      <div>
+        <div className="eyebrow text-[10px] text-sky-700 mb-3">Changes from prior version</div>
+        <ul className="space-y-3">
+          {changes.map((c, i) => (
+            <li key={i} className="text-[12.5px] text-ink-800">
+              <div className="font-mono text-[11px] text-ink-500 mb-0.5">{c.field_path}</div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-ink-500 line-through">{String(c.previous_value ?? "—")}</span>
+                <ArrowRight className="h-3 w-3 text-ink-400 shrink-0" />
+                <span className="font-medium text-ink-900">{String(c.new_value ?? "—")}</span>
+              </div>
+              {c.evidence_quote && (
+                <blockquote className="mt-1 pl-2 border-l-2 border-sky-300 text-[11px] text-sky-700 italic">
+                  &ldquo;{c.evidence_quote}&rdquo;
+                </blockquote>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
@@ -415,10 +436,12 @@ function ExtractionResult({
   extraction,
   flags,
   modeUsed,
+  priorRunText,
 }: {
   extraction: AdaExtraction;
   flags: AdaFlag[];
   modeUsed: AdaMode;
+  priorRunText?: string;
 }) {
   const flagMap = new Map<AdaFieldAffected, AdaFlag[]>();
   for (const f of flags) {
@@ -436,7 +459,13 @@ function ExtractionResult({
         </div>
       )}
 
-      {modeUsed === "update" && <DeltaPanel extraction={extraction} />}
+      {modeUsed === "update" && (
+        <DeltaPanel
+          extraction={extraction}
+          currentRunText={extraction.raw_text_preserved || undefined}
+          priorRunText={priorRunText}
+        />
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <CoreTermsCard extraction={extraction} flagMap={flagMap} />
@@ -463,11 +492,6 @@ function PriorRunItem({ run }: { run: AdaHistoryEntry }) {
   const [expanded, setExpanded] = useState(false);
   const [showBreakdown, setShowBreakdown] = useState(false);
 
-  const snippet =
-    run.pastedText.length > 80
-      ? run.pastedText.slice(0, 80) + "…"
-      : run.pastedText;
-
   // Parse snapshot once; treat malformed JSON the same as null.
   let snapshotData: { extraction: AdaExtraction; flags: AdaFlag[] } | null = null;
   if (run.extractionSnapshotJson) {
@@ -488,12 +512,11 @@ function PriorRunItem({ run }: { run: AdaHistoryEntry }) {
         className="w-full flex items-start justify-between gap-3 px-4 py-3 text-left hover:bg-ink-50/40 transition-colors"
       >
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 mb-0.5">
+          <div className="flex items-center gap-2">
             <span className="text-[11px] text-ink-500">{formatTimestamp(run.pastedAt)}</span>
             <span className="text-ink-300">·</span>
             <span className="text-[11px] text-ink-500">{MODE_LABELS[run.modeUsed]}</span>
           </div>
-          <p className="text-[12px] text-ink-600 leading-relaxed">{snippet}</p>
         </div>
         {expanded
           ? <ChevronUp className="h-3.5 w-3.5 text-ink-400 shrink-0 mt-1" />
@@ -506,7 +529,6 @@ function PriorRunItem({ run }: { run: AdaHistoryEntry }) {
         <div className="px-4 pb-4 border-t border-ink-100/80">
           {/* Full submitted text */}
           <div className="mt-3">
-            <div className="eyebrow text-[10px] text-ink-500 mb-2">Submitted text</div>
             <div
               className="text-[12px] text-ink-700 bg-canvas-soft rounded-lg p-4 ring-1 ring-ink-200/50 leading-relaxed whitespace-pre-wrap font-[450]"
               style={{ fontStyle: "italic" }}
@@ -691,6 +713,7 @@ export function AdaSection({
             extraction={displayExtraction}
             flags={displayFlags}
             modeUsed={displayMode as AdaMode}
+            priorRunText={priorRuns[0]?.pastedText}
           />
         </div>
       )}
@@ -740,7 +763,7 @@ export function AdaSection({
             {hasExisting && (
               <div className="flex items-center gap-4">
                 <span className="eyebrow text-[10px] text-ink-500">Mode</span>
-                {(["update", "replace", "initial"] as const).map((m) => (
+                {(["update", "replace"] as const).map((m) => (
                   <label
                     key={m}
                     className={cn(
