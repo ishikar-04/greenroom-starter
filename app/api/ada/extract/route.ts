@@ -21,6 +21,7 @@ function makeBracketedUpdateFlag(match: string): AdaFlag {
     description:
       "The pasted text contains a bracketed note that may represent a post-hoc update to deal terms. Verify that the structured fields reflect the most recent version.",
     evidence_quote: match,
+    suggested_question: null,
   };
 }
 
@@ -31,6 +32,7 @@ function makeModeFallbackFlag(): AdaFlag {
     description:
       "Update mode was requested but no prior extraction exists for this deal. Ada ran as Initial extraction instead.",
     evidence_quote: null,
+    suggested_question: null,
   };
 }
 

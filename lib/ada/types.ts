@@ -80,6 +80,7 @@ export interface AdaFlag {
   field_affected: AdaFieldAffected;
   description: string;
   evidence_quote: string | null;
+  suggested_question: string | null;
 }
 
 export interface AdaApiRequest {

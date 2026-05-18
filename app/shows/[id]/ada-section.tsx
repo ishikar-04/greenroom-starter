@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Sparkles, ChevronDown, ChevronUp, AlertTriangle, Info, ArrowRight } from "lucide-react";
+import { Sparkles, ChevronDown, ChevronUp, AlertTriangle, Info, ArrowRight, Copy, Check } from "lucide-react";
 import {
   Card,
   CardHeader,
@@ -54,6 +54,38 @@ function formatPct(n: number | null | undefined): string {
 
 // ─── Flag display ────────────────────────────────────────────────────────────
 
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy() {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className="flex items-center gap-1 text-[10.5px] text-ink-400 hover:text-ink-700 transition-colors shrink-0"
+      aria-label="Copy question"
+    >
+      {copied ? (
+        <>
+          <Check className="h-3 w-3 text-brand-600" />
+          <span className="text-brand-600">Copied!</span>
+        </>
+      ) : (
+        <>
+          <Copy className="h-3 w-3" />
+          <span>Copy</span>
+        </>
+      )}
+    </button>
+  );
+}
+
 function FlagItem({ flag, inline = false }: { flag: AdaFlag; inline?: boolean }) {
   return (
     <div
@@ -69,7 +101,7 @@ function FlagItem({ flag, inline = false }: { flag: AdaFlag; inline?: boolean })
             inline ? "h-3 w-3 mt-0.5" : "h-3.5 w-3.5 mt-0.5",
           )}
         />
-        <div className="min-w-0">
+        <div className="min-w-0 w-full">
           <span
             className={cn(
               "font-medium text-amber-900",
@@ -95,6 +127,19 @@ function FlagItem({ flag, inline = false }: { flag: AdaFlag; inline?: boolean })
             >
               &ldquo;{flag.evidence_quote}&rdquo;
             </blockquote>
+          )}
+          {flag.suggested_question && (
+            <div className="mt-2 pt-2 border-t border-amber-200/60">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="eyebrow text-[9px] text-amber-700 mb-1">Suggested question</div>
+                  <p className={cn("text-amber-800 leading-relaxed", inline ? "text-[11px]" : "text-[12px]")}>
+                    {flag.suggested_question}
+                  </p>
+                </div>
+                <CopyButton text={flag.suggested_question} />
+              </div>
+            </div>
           )}
         </div>
       </div>

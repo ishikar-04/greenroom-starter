@@ -143,8 +143,9 @@ const flagSchema: Schema = {
     },
     description: { type: SchemaType.STRING },
     evidence_quote: { type: SchemaType.STRING, nullable: true },
+    suggested_question: { type: SchemaType.STRING, nullable: true },
   },
-  required: ["flag_class", "field_affected", "description"],
+  required: ["flag_class", "field_affected", "description", "suggested_question"],
 };
 
 export const geminiResponseSchema: Schema = {

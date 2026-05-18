@@ -54,6 +54,7 @@ ${AMBIGUITY_CLASS_GUIDE}
 - Always copy the full original text verbatim into raw_text_preserved.
 - For every flag you generate, include an evidence_quote: copy the exact phrase from the email that triggered the flag. If no specific phrase applies, set evidence_quote to null.
 - The field_affected value should identify the specific deal field the flag relates to. Use "global" only for flags that span the entire deal (e.g., a bracketed override note, a mode-fallback advisory).
+- For every flag you generate, produce a suggested_question: a single neutral sentence Mariana could send to the agent to resolve the ambiguity. The question must be specific to the evidence quoted, neutral in framing (do not imply a preferred answer), and short enough to paste directly into an email. Example for an ambiguous_net flag: "Could you confirm whether 'net' in this deal means gross box office minus approved venue expenses, or whether there are additional deductions (ticket fees, credit card surcharges, etc.) that come out first?"
 - Generate zero flags if the deal is clear. Do not pad with unnecessary warnings.
 - Percentages should be expressed as decimals (e.g., 85% → 0.85).`;
 }
