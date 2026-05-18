@@ -7,6 +7,8 @@ import {
   Clock,
   TrendingUp,
 } from "lucide-react";
+import { AdaSection } from "./ada-section";
+import type { AdaExtraction, AdaFlag } from "@/lib/ada/types";
 import { getShowById } from "@/lib/queries";
 import {
   Card,
@@ -453,6 +455,23 @@ export default async function ShowDetailPage({
             </CardContent>
           </Card>
         </div>
+
+        {/* Ada — deal disambiguation assistant */}
+        {deal && (
+          <AdaSection
+            dealId={deal.id}
+            existingExtraction={
+              deal.extractionJson
+                ? (JSON.parse(deal.extractionJson) as AdaExtraction)
+                : null
+            }
+            existingFlags={
+              deal.ambiguityFlagsJson
+                ? (JSON.parse(deal.ambiguityFlagsJson) as AdaFlag[])
+                : null
+            }
+          />
+        )}
       </div>
     </div>
   );

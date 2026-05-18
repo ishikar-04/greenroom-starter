@@ -125,7 +125,24 @@ export const deals = sqliteTable("deals", {
   bonusesJson: text("bonuses_json"),
   dealNotesFreetext: text("deal_notes_freetext"),
 
+  // Ada — current structured extraction and flags (overwritten on each run)
+  extractionJson: text("extraction_json"),
+  ambiguityFlagsJson: text("ambiguity_flags_json"),
+
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+});
+
+// -------- Ada: deal notes history (append-only) --------
+
+export const dealNotesHistory = sqliteTable("deal_notes_history", {
+  id: text("id").primaryKey(),
+  dealId: text("deal_id")
+    .notNull()
+    .references(() => deals.id),
+  pastedText: text("pasted_text").notNull(),
+  modeUsed: text("mode_used", { enum: ["initial", "update", "replace"] }).notNull(),
+  pastedAt: integer("pasted_at", { mode: "timestamp" }).notNull(),
+  extractionSnapshotJson: text("extraction_snapshot_json"),
 });
 
 // -------- Ticket sales --------
@@ -294,6 +311,7 @@ export type TicketSale = typeof ticketSales.$inferSelect;
 export type Comp = typeof comps.$inferSelect;
 export type Expense = typeof expenses.$inferSelect;
 export type Settlement = typeof settlements.$inferSelect;
+export type DealNotesHistory = typeof dealNotesHistory.$inferSelect;
 
 // -------- Decoded JSON helpers --------
 
